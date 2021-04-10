@@ -1,0 +1,3 @@
+<$MKINCDIR/config
+PROGNAME = hotline
+CFILES = `{ls *.c}
