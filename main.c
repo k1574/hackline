@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <signal.h>
 #include <termios.h>
 #include <string.h>
 
@@ -9,6 +10,9 @@
 
 #define ESC "\033"
 
+void finish(void);
+void undopos(void);
+void savepos(void);
 void hndlchar(void);
 void quit(void);
 
@@ -19,12 +23,18 @@ static struct termios term, term_orig;
 static char ch = 0;
 static int curpos = 0 ;
 static int linelen = 0 ;
-static char linebuf[512] = "buf" ;
+static char linebuf[512] = {'\0'} ;
 
 void
-print(const char *s)
+sigint(int signum)
 {
-	write(1, s, strlen(s));
+	quit();
+}
+
+void
+eprint(const char *s)
+{
+	write(2, s, strlen(s));
 }
 
 void
@@ -49,7 +59,7 @@ disablebuffering(void)
 void
 clearline(void)
 {
-	print(ESC "[2K");
+	eprint(ESC "[2K");
 }
 
 void
@@ -70,22 +80,22 @@ update()
 	char buf[512];
 	clearline();
 	undopos();
-	print(linebuf);
+	eprint(linebuf);
 	undopos();
 	sprintf(buf, ESC "[%dC", curpos);
-	print(buf);
+	eprint(buf);
 }
 
 void
 savepos(void)
 {
-	print(ESC "[s");
+	eprint(ESC "[s");
 }
 
 void
 undopos(void)
 {
-	print(ESC "[u");
+	eprint(ESC "[u");
 }
 
 void
@@ -120,6 +130,7 @@ hndlchar(void)
 	case CHAR_LEFT : charleft() ; ; break ;
 	case CHAR_RIGHT : charright() ; break ;
 	case CHAR_EXIT : running=0 ; break ;
+	case '\n' : finish() ; break ;
 	default: inschr();
 	}
 }
@@ -131,10 +142,18 @@ quit(void)
 	exit(0);
 }
 
+void
+finish(void)
+{
+	printf("%s", linebuf);
+	quit();
+}
+
 int
 main(int argc, char *argv[], char *envp[])
 {
 	argv0 = argv[0] ;
+	signal(SIGINT, sigint);
 	disablebuffering();
 	run();
 	return 0;
