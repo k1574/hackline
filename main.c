@@ -59,7 +59,7 @@ disablebuffering(void)
 void
 clearline(void)
 {
-	eprint(ESC "[2K");
+	eprint(ESC "[0K");
 }
 
 void
@@ -78,8 +78,8 @@ update()
 {
 	int oldpos;
 	char buf[512];
-	clearline();
 	undopos();
+	clearline();
 	eprint(linebuf);
 	undopos();
 	sprintf(buf, ESC "[%dC", curpos);

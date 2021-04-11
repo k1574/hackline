@@ -1,0 +1,23 @@
+#!/bin/env rc
+
+linefile = `{mktemp}
+oldifs = $ifs
+
+fn prompt {
+	echo -n $prompt
+}
+
+while(true){
+
+	prompt
+	hackline >[3] $linefile
+	echo
+
+	ifs = ()
+	line = `{cat $linefile}
+	ifs = $oldifs
+
+	if(test ! -z $line )
+		eval $"line
+}
+
