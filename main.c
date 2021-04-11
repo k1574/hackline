@@ -112,6 +112,8 @@ inschr(void)
 void
 charleft(void)
 {
+	if(!curpos) return ;
+
 	write(1, "\033[1D", 4);
 	--curpos;
 }
@@ -119,6 +121,8 @@ charleft(void)
 void
 charright(void)
 {
+	if(curpos + 1 >  linelen) return ;
+
 	write(1, "\033[1C", 4);
 	++curpos;
 }
@@ -145,7 +149,7 @@ quit(void)
 void
 finish(void)
 {
-	printf("%s", linebuf);
+	write(3, linebuf, linelen);
 	quit();
 }
 

@@ -1,5 +1,6 @@
-# hotline
+# hackline
 
 Reading lines with hotkeys utility.
 Works only with ANSI escape sequences.
+Outputs the line into 3-d output descriptor.
 
