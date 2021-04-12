@@ -1,0 +1,24 @@
+#!/bin/env sh
+
+linefile=`mktemp`
+oldifs=$IFS
+
+prompt(){
+	echo -n '% '
+}
+
+while true ; do
+
+	prompt
+	hackline 3> "$linefile"
+	echo
+
+	IFS=""
+	line=`cat "$linefile"`
+	IFS="$oldifs"
+
+	if test ! -z "$line" ; then
+		eval "$line"
+	fi
+done
+
