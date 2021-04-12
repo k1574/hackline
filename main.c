@@ -128,6 +128,39 @@ delchr(void)
 }
 
 void
+deltobeg(void)
+{
+	static char buf[512];
+	strcpy(buf, linebuf+curpos);
+	strcpy(linebuf, buf);
+	curpos = 0 ;
+	linelen = strlen(linebuf) ;
+	update();
+}
+
+char *
+isspecial(char c)
+{
+	return strchr("`~!@#$%^&*<>(){}[]?:;i\\/|+=", c) ;
+}
+
+int
+getwordbackidx(void)
+{
+	int i=curpos;
+	while(isspace(linebuf[i]))
+		++i;
+}
+
+void
+cutline(int n1, int n2)
+{
+	static char buf[512];
+	strcpy(buf, linebuf+n2);
+	strcpy(linebuf+n1, buf);
+}
+
+void
 charleft(void)
 {
 	if(!curpos) return ;
@@ -175,6 +208,7 @@ hndlchar(void)
 	case CHAR_BEG : charbeg() ; break ;
 	case CHAR_EXIT : running=0 ; break ;
 	case CHAR_DEL : delchr() ; break ;
+	case CHAR_DELTOBEG : deltobeg() ; break ;
 	case '\n' : finish() ; break ;
 	default: inschr() ;
 	}
