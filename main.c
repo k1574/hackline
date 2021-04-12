@@ -53,7 +53,6 @@ disablebuffering(void)
 		printf("tcsetattr failed\n");
 		exit(1);
 	}
-	//setvbuf(stdin, 0, _IONBF, 0);
 }
 
 void
@@ -82,7 +81,14 @@ update()
 	clearline();
 	eprint(linebuf);
 	undopos();
-	sprintf(buf, ESC "[%dC", curpos);
+	charnright(curpos);
+}
+
+void
+charnright(int n)
+{
+	char buf[32];
+	sprintf(buf, ESC "[%dC", n);
 	eprint(buf);
 }
 
@@ -119,6 +125,12 @@ charleft(void)
 }
 
 void
+charbeg(void)
+{
+	mvcursor(0);
+}
+
+void
 charright(void)
 {
 	if(curpos + 1 >  linelen) return ;
@@ -128,11 +140,27 @@ charright(void)
 }
 
 void
+charend(void)
+{
+	mvcursor(linelen);
+}
+
+void
+mvcursor(int n)
+{
+	curpos = n ;
+	undopos();
+	if(n) charnright(n) ;
+}
+
+void
 hndlchar(void)
 {
 	switch(ch){
 	case CHAR_LEFT : charleft() ; ; break ;
 	case CHAR_RIGHT : charright() ; break ;
+	case CHAR_END :  charend() ; break ;
+	case CHAR_BEG : charbeg() ; break ;
 	case CHAR_EXIT : running=0 ; break ;
 	case '\n' : finish() ; break ;
 	default: inschr();
