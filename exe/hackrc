@@ -4,7 +4,7 @@ linefile = `{mktemp}
 oldifs = $ifs
 
 fn prompt {
-	echo -n $prompt
+	echo -n '% '
 }
 
 while(true){

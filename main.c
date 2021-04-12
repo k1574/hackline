@@ -107,11 +107,22 @@ undopos(void)
 void
 inschr(void)
 {
-	char buf[512];
+	static char buf[512];
 	strcpy(buf, linebuf+curpos);
 	linebuf[curpos++] = ch ;
 	strcpy(linebuf+curpos, buf);
 	++linelen;
+	update();
+}
+
+void
+delchr(void)
+{
+	static char buf[512];
+	if(!curpos) return ;
+	strcpy(buf, linebuf+curpos);
+	strcpy(linebuf+(--curpos), buf);
+	--linelen;
 	update();
 }
 
@@ -157,13 +168,14 @@ void
 hndlchar(void)
 {
 	switch(ch){
-	case CHAR_LEFT : charleft() ; ; break ;
+	case CHAR_LEFT : charleft() ; break ;
 	case CHAR_RIGHT : charright() ; break ;
 	case CHAR_END :  charend() ; break ;
 	case CHAR_BEG : charbeg() ; break ;
 	case CHAR_EXIT : running=0 ; break ;
+	case CHAR_DEL : delchr() ; break ;
 	case '\n' : finish() ; break ;
-	default: inschr();
+	default: inschr() ;
 	}
 }
 
