@@ -88,6 +88,7 @@ void
 charnright(int n)
 {
 	char buf[32];
+	if(!n) return ;
 	sprintf(buf, ESC "[%dC", n);
 	eprint(buf);
 }
