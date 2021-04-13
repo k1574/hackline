@@ -138,26 +138,78 @@ deltobeg(void)
 	update();
 }
 
-char *
-isspecial(char c)
+int
+isbracket(char c)
 {
-	return strchr("`~!@#$%^&*<>(){}[]?:;i\\/|+=", c) ;
+	return strchr("\"`<>(){}[]", c) ?
+		1 : 0 ;
 }
 
 int
-getwordbackidx(void)
+issep(char c)
 {
-	int i=curpos;
-	while(isspace(linebuf[i]))
-		++i;
+	return strchr("$-_/\\+=;:*?*&%@~!#", c) ?
+		1 : 0 ;
+}
+
+int
+delwordidx(void)
+{
+	char c;
+	char *lp = linebuf + curpos ;
+
+	if(!linelen) return ;
+	--lp ;
+	while(isspace(*lp)) --lp ;
+
+	c = *lp ;
+	if (isalnum(c)) {
+		while(isalnum(*lp) && (lp - linebuf)) --lp ;
+	}
+
+	return lp - linebuf + ((lp - linebuf) ? 1 : 0) ;
+}
+
+void
+delword(void)
+{
+	int idx = delwordidx() ;
+	cutline(idx, curpos);
+	curpos = idx ;
+	update();
+}
+
+int
+backwordidx(void)
+{
+	char *lp = linebuf + curpos ;
+
+	if(!linelen) return ;
+
+	--lp;
+	if(isspace(*lp))
+		while(isspace(*lp)) --lp ;
+	else if(isalnum(*lp))
+		while(isalnum(*lp)) --lp ;
+
+	return lp - linebuf + ((lp - linebuf) ? 1 : 0) ;
+}
+
+void
+backword(void)
+{
+	int idx = backwordidx() ;
+	mvcursor(idx);
 }
 
 void
 cutline(int n1, int n2)
 {
 	static char buf[512];
+	if(n1 == n2) return ;
 	strcpy(buf, linebuf+n2);
 	strcpy(linebuf+n1, buf);
+	linelen -= n2 - n1 ;
 }
 
 void
@@ -209,6 +261,9 @@ hndlchar(void)
 	case CHAR_EXIT : running=0 ; break ;
 	case CHAR_DEL : delchr() ; break ;
 	case CHAR_DELTOBEG : deltobeg() ; break ;
+	case CHAR_DELWORD : delword() ; break ;
+	case CHAR_BACKWORD : backword() ; break ;
+	//case CHAR RIGHTWORD : rightword() ; break ;
 	case '\n' : finish() ; break ;
 	default: inschr() ;
 	}

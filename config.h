@@ -2,6 +2,9 @@
 #define CHAR_RIGHT (char)12
 #define CHAR_DELTOBEG (char)21
 #define CHAR_EXIT (char)24
+#define CHAR_DELWORD (char)23
 #define CHAR_END (char)5
 #define CHAR_BEG (char)1
 #define CHAR_DEL (char)127
+#define CHAR_BACKWORD (char)2
+#define CHAR_FORWWORD (char)6
