@@ -1,5 +1,7 @@
 #!/bin/env rc
 
+test -r $home/lib/profile && . $home/lib/profile
+
 linefile = `{mktemp}
 oldifs = $ifs
 
@@ -17,7 +19,6 @@ while(true){
 	line = `{cat $linefile}
 	ifs = $oldifs
 
-	if(test ! -z $line )
-		eval $"line
+	eval $"line
 }
 
