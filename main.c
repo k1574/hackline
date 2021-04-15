@@ -251,6 +251,11 @@ mvcursor(int n)
 }
 
 void
+hndltab(void)
+{
+}
+
+void
 hndlchar(void)
 {
 	switch(ch){
@@ -264,6 +269,7 @@ hndlchar(void)
 	case CHAR_DELWORD : delword() ; break ;
 	case CHAR_BACKWORD : backword() ; break ;
 	//case CHAR RIGHTWORD : rightword() ; break ;
+	case CHAR_TAB : hndltab() ; break ;
 	case '\n' : finish() ; break ;
 	default: inschr() ;
 	}

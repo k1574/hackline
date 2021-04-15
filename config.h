@@ -8,3 +8,4 @@
 #define CHAR_DEL (char)127
 #define CHAR_BACKWORD (char)2
 #define CHAR_FORWWORD (char)6
+#define CHAR_TAB '\t'
