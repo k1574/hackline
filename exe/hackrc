@@ -9,6 +9,9 @@ fn prompt {
 	echo -n '% '
 }
 
+fn sigint {
+}
+
 while(true){
 
 	prompt

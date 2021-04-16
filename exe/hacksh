@@ -7,6 +7,12 @@ prompt(){
 	echo -n '% '
 }
 
+sigint(){
+	echo -n
+}
+
+trap 'sigint' TERM INT
+
 while true ; do
 
 	prompt
