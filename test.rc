@@ -1,0 +1,10 @@
+#!/bin/env rc
+
+oldifs = $ifs
+temp = `{mktemp}
+./exe/hackline >[3] $temp
+ifs=()
+tempdat = `{cat $temp}
+ifs=$oldifs
+echo
+echo "$tempdat"

@@ -1,3 +1,6 @@
 <$MKINCDIR/config
 PROGNAME = hackline
 CFILES = `{ls *.c}
+HFILES = `{ls *.c}
+INCS = $INC9
+AFILES = $OBJ9

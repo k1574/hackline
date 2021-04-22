@@ -5,25 +5,35 @@
 #include <signal.h>
 #include <termios.h>
 #include <string.h>
+#include <utf.h>
 
 #include "config.h"
+#include "defs.h"
 
 #define ESC "\033"
+
+enum {
+	BufSiz = 512,
+} ;
 
 void finish(void);
 void undopos(void);
 void savepos(void);
-void hndlchar(void);
+void hndlrune(Rune);
 void quit(void);
+void run(void);
+void disablebuffering(void);
+
+void curnright(int n);
+void mvcur(int n);
 
 static char *argv0 = 0;
 
 static int running = 0; 
 static struct termios term, term_orig;
-static char ch = 0;
 static int curpos = 0 ;
 static int linelen = 0 ;
-static char linebuf[512] = {'\0'} ;
+static Rune linebuf[512] = {0, 0} ;
 
 void
 sigint(int signum)
@@ -31,10 +41,30 @@ sigint(int signum)
 	quit();
 }
 
+
 void
-eprint(const char *s)
+fstrprint(int fd, char *s)
 {
-	write(2, s, strlen(s));
+	write(fd, s, strlen(s));
+}
+
+void
+strprint(char *s)
+{
+	fstrprint(1, s);
+}
+
+void
+frunestrprint(int fd, Rune *rstr)
+{
+	static char buf[BufSiz];
+	fstrprint(fd, runestoutf(buf, rstr));
+}
+
+void
+runestrprint(Rune *rstr)
+{
+	frunestrprint(1, rstr);
 }
 
 void
@@ -58,71 +88,88 @@ disablebuffering(void)
 void
 clearline(void)
 {
-	eprint(ESC "[0K");
+	fstrprint(1, ESC "[0K");
+}
+
+Rune
+readrune(int fd)
+{
+	unsigned char c[4];
+	Rune r;
+	int len;
+
+	if(!read(fd, c, 1)) return 0 ;
+
+	len = runelenbyhd(*c) ;
+	if(len>1) read(fd, c+1, len-1) ;
+	chartorune(&r, c);
+
+	return r ;	
 }
 
 void
 run(void)
 {
+	Rune r;
+
 	running = 1 ;
 	savepos();
 	while(running)
-		if (read(0, &ch, 1) > 0) 
-			hndlchar();
+		if(r = readrune(0))
+			hndlrune(r);
 	quit();
 }
 
 void
 update()
 {
-	int oldpos;
-	char buf[512];
 	undopos();
 	clearline();
-	eprint(linebuf);
+	runestrprint(linebuf);
+
 	undopos();
-	charnright(curpos);
+	curnright(curpos);
 }
 
 void
-charnright(int n)
+curnright(int n)
 {
 	char buf[32];
 	if(!n) return ;
 	sprintf(buf, ESC "[%dC", n);
-	eprint(buf);
+	strprint(buf);
 }
 
 void
 savepos(void)
 {
-	eprint(ESC "[s");
+	strprint(ESC "[s");
 }
 
 void
 undopos(void)
 {
-	eprint(ESC "[u");
+	strprint(ESC "[u");
 }
 
 void
-inschr(void)
+insrune(Rune r)
 {
-	static char buf[512];
-	strcpy(buf, linebuf+curpos);
-	linebuf[curpos++] = ch ;
-	strcpy(linebuf+curpos, buf);
+	static Rune buf[512];
+	runestrcpy(buf, linebuf+curpos);
+	linebuf[curpos++] = r ;
+	runestrcpy(linebuf+curpos, buf);
 	++linelen;
 	update();
 }
 
 void
-delchr(void)
+delrune(void)
 {
-	static char buf[512];
+	static Rune buf[512];
 	if(!curpos) return ;
-	strcpy(buf, linebuf+curpos);
-	strcpy(linebuf+(--curpos), buf);
+	runestrcpy(buf, linebuf+curpos);
+	runestrcpy(linebuf+(--curpos), buf);
 	--linelen;
 	update();
 }
@@ -130,15 +177,15 @@ delchr(void)
 void
 deltobeg(void)
 {
-	static char buf[512];
-	strcpy(buf, linebuf+curpos);
-	strcpy(linebuf, buf);
+	static Rune buf[512];
+	runestrcpy(buf, linebuf+curpos);
+	runestrcpy(linebuf, buf);
 	curpos = 0 ;
-	linelen = strlen(linebuf) ;
+	linelen = runestrlen(linebuf) ;
 	update();
 }
 
-int
+/*int
 isbracket(char c)
 {
 	return strchr("\"`<>(){}[]", c) ?
@@ -158,7 +205,7 @@ delwordidx(void)
 	char c;
 	char *lp = linebuf + curpos ;
 
-	if(!linelen) return ;
+	if(!linelen) return 0 ;
 	--lp ;
 	while(isspace(*lp)) --lp ;
 
@@ -199,21 +246,21 @@ void
 backword(void)
 {
 	int idx = backwordidx() ;
-	mvcursor(idx);
-}
+	mvcur(idx);
+}*/
 
 void
 cutline(int n1, int n2)
 {
-	static char buf[512];
+	static Rune buf[512];
 	if(n1 == n2) return ;
-	strcpy(buf, linebuf+n2);
-	strcpy(linebuf+n1, buf);
+	runestrcpy(buf, linebuf+n2);
+	runestrcpy(linebuf+n1, buf);
 	linelen -= n2 - n1 ;
 }
 
 void
-charleft(void)
+curleft(void)
 {
 	if(!curpos) return ;
 
@@ -222,13 +269,13 @@ charleft(void)
 }
 
 void
-charbeg(void)
+curbeg(void)
 {
-	mvcursor(0);
+	mvcur(0);
 }
 
 void
-charright(void)
+curright(void)
 {
 	if(curpos + 1 >  linelen) return ;
 
@@ -237,17 +284,17 @@ charright(void)
 }
 
 void
-charend(void)
+curend(void)
 {
-	mvcursor(linelen);
+	mvcur(linelen);
 }
 
 void
-mvcursor(int n)
+mvcur(int n)
 {
 	curpos = n ;
 	undopos();
-	if(n) charnright(n) ;
+	if(n) curnright(n) ;
 }
 
 void
@@ -256,22 +303,28 @@ hndltab(void)
 }
 
 void
-hndlchar(void)
+hndlrune(Rune r)
 {
-	switch(ch){
-	case CHAR_LEFT : charleft() ; break ;
-	case CHAR_RIGHT : charright() ; break ;
-	case CHAR_END :  charend() ; break ;
-	case CHAR_BEG : charbeg() ; break ;
+	switch(r){
+	case CHAR_LEFT : curleft() ; break ;
+	case CHAR_RIGHT : curright() ; break ;
+	case CHAR_END :  curend() ; break ;
+	case CHAR_BEG : curbeg() ; break ;
 	case CHAR_EXIT : running=0 ; break ;
-	case CHAR_DEL : delchr() ; break ;
+	case CHAR_DEL : delrune() ; break ;
 	case CHAR_DELTOBEG : deltobeg() ; break ;
-	case CHAR_DELWORD : delword() ; break ;
-	case CHAR_BACKWORD : backword() ; break ;
+	/*case CHAR_DELWORD : delword() ; break ;
+	case CHAR_BACKWORD : backword() ; break ;*/
 	//case CHAR RIGHTWORD : rightword() ; break ;
 	case CHAR_TAB : hndltab() ; break ;
 	case '\n' : finish() ; break ;
-	default: inschr() ;
+	default:
+		insrune(r) ;
+	}
+	D {
+		printf("\n%d %d %d\n", r, curpos, linelen);
+		runestrprint(linebuf);
+		puts("");
 	}
 }
 
@@ -285,7 +338,7 @@ quit(void)
 void
 finish(void)
 {
-	write(3, linebuf, linelen);
+	frunestrprint(3, linebuf);
 	quit();
 }
 
