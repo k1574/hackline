@@ -1,1 +1,3 @@
-[] UTF-8 support.
+[x] UTF-8 support.
+[] Multiline reading.
+
