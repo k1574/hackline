@@ -77,7 +77,7 @@ disablebuffering(void)
 	term = term_orig;
 	term.c_lflag &= ~ICANON;
 	term.c_lflag &= ~ECHO;
-	term.c_cc[VMIN] = 0;
+	term.c_cc[VMIN] = 1;
 	term.c_cc[VTIME] = 0;
 	if (tcsetattr(0, TCSANOW, &term)) {
 		printf("tcsetattr failed\n");
