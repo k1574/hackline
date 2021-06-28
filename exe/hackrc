@@ -6,6 +6,7 @@ linefile = `{mktemp}
 oldifs = $ifs
 ifs = ()
 nlc = `{echo}
+ifs = $oldifs
 
 fn prompt {
 	echo -n '% '
@@ -22,7 +23,7 @@ fn readline {
 	ifs = ()
 	hackline >[3] $linefile
 	linedata = `{cat $"linefile}
-	ifs = $oldfs
+	ifs = $oldifs
 }
 
 fn readevalline {

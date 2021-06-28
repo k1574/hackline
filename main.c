@@ -7,6 +7,8 @@
 #include <string.h>
 #include <utf.h>
 
+#include <aes.h>
+
 #include "config.h"
 #include "defs.h"
 
@@ -18,14 +20,13 @@ enum {
 
 void finish(void);
 void undopos(void);
-void savepos(void);
 void hndlrune(Rune);
 void quit(void);
 void run(void);
 void disablebuffering(void);
 
-void curnright(int n);
 void mvcur(int n);
+void mvcurrel(int n);
 
 static char *argv0 = 0;
 
@@ -33,7 +34,7 @@ static int running = 0;
 static struct termios term, term_orig;
 static int curpos = 0 ;
 static int linelen = 0 ;
-static Rune linebuf[512] = {0, 0} ;
+static Rune linebuf[BufSiz] = {0, 0} ;
 
 void
 sigint(int signum)
@@ -113,7 +114,7 @@ run(void)
 	Rune r;
 
 	running = 1 ;
-	savepos();
+	aes_save_pos();
 	while(running)
 		if(r = readrune(0))
 			hndlrune(r);
@@ -123,39 +124,17 @@ run(void)
 void
 update()
 {
-	undopos();
+	aes_undo_pos();
 	clearline();
 	runestrprint(linebuf);
-
-	undopos();
-	curnright(curpos);
-}
-
-void
-curnright(int n)
-{
-	char buf[32];
-	if(!n) return ;
-	sprintf(buf, ESC "[%dC", n);
-	strprint(buf);
-}
-
-void
-savepos(void)
-{
-	strprint(ESC "[s");
-}
-
-void
-undopos(void)
-{
-	strprint(ESC "[u");
+	aes_undo_pos();
+	if(curpos) aes_move_right(curpos) ;
 }
 
 void
 insrune(Rune r)
 {
-	static Rune buf[512];
+	static Rune buf[BufSiz];
 	runestrcpy(buf, linebuf+curpos);
 	linebuf[curpos++] = r ;
 	runestrcpy(linebuf+curpos, buf);
@@ -166,7 +145,7 @@ insrune(Rune r)
 void
 delrune(void)
 {
-	static Rune buf[512];
+	static Rune buf[BufSiz];
 	if(!curpos) return ;
 	runestrcpy(buf, linebuf+curpos);
 	runestrcpy(linebuf+(--curpos), buf);
@@ -177,7 +156,7 @@ delrune(void)
 void
 deltobeg(void)
 {
-	static Rune buf[512];
+	static Rune buf[BufSiz];
 	runestrcpy(buf, linebuf+curpos);
 	runestrcpy(linebuf, buf);
 	curpos = 0 ;
@@ -185,116 +164,45 @@ deltobeg(void)
 	update();
 }
 
-/*int
-isbracket(char c)
-{
-	return strchr("\"`<>(){}[]", c) ?
-		1 : 0 ;
-}
-
-int
-issep(char c)
-{
-	return strchr("$-_/\\+=;:*?*&%@~!#", c) ?
-		1 : 0 ;
-}
-
-int
-delwordidx(void)
-{
-	char c;
-	char *lp = linebuf + curpos ;
-
-	if(!linelen) return 0 ;
-	--lp ;
-	while(isspace(*lp)) --lp ;
-
-	c = *lp ;
-	if (isalnum(c)) {
-		while(isalnum(*lp) && (lp - linebuf)) --lp ;
-	}
-
-	return lp - linebuf + ((lp - linebuf) ? 1 : 0) ;
-}
-
-void
-delword(void)
-{
-	int idx = delwordidx() ;
-	cutline(idx, curpos);
-	curpos = idx ;
-	update();
-}
-
-int
-backwordidx(void)
-{
-	char *lp = linebuf + curpos ;
-
-	if(!linelen) return ;
-
-	--lp;
-	if(isspace(*lp))
-		while(isspace(*lp)) --lp ;
-	else if(isalnum(*lp))
-		while(isalnum(*lp)) --lp ;
-
-	return lp - linebuf + ((lp - linebuf) ? 1 : 0) ;
-}
-
-void
-backword(void)
-{
-	int idx = backwordidx() ;
-	mvcur(idx);
-}*/
-
 void
 cutline(int n1, int n2)
 {
-	static Rune buf[512];
+	static Rune buf[BufSiz];
 	if(n1 == n2) return ;
 	runestrcpy(buf, linebuf+n2);
 	runestrcpy(linebuf+n1, buf);
 	linelen -= n2 - n1 ;
 }
 
-void
-curleft(void)
+int
+isposcorrect(int newpos)
 {
-	if(!curpos) return ;
-
-	write(1, "\033[1D", 4);
-	--curpos;
-}
-
-void
-curbeg(void)
-{
-	mvcur(0);
-}
-
-void
-curright(void)
-{
-	if(curpos + 1 >  linelen) return ;
-
-	write(1, "\033[1C", 4);
-	++curpos;
-}
-
-void
-curend(void)
-{
-	mvcur(linelen);
+	if(newpos < 0 || linelen < newpos) return 0 ;
+	else return 1 ;
 }
 
 void
 mvcur(int n)
 {
+	if(!isposcorrect(n)) return ;
 	curpos = n ;
-	undopos();
-	if(n) curnright(n) ;
+	aes_undo_pos();
+	if(curpos)
+		aes_move_right(curpos);
+}
+
+void
+mvcurrel(int n)
+{
+	int newpos; 
+	newpos = curpos + n ;
+	if(!isposcorrect(newpos)) return ;
+
+	curpos = newpos ;
+	if(n>0)
+		aes_move_right(n) ;
+	else
+		aes_move_left(-n);
 }
 
 void
@@ -306,18 +214,36 @@ void
 hndlrune(Rune r)
 {
 	switch(r){
-	case CHAR_LEFT : curleft() ; break ;
-	case CHAR_RIGHT : curright() ; break ;
-	case CHAR_END :  curend() ; break ;
-	case CHAR_BEG : curbeg() ; break ;
-	case CHAR_EXIT : running=0 ; break ;
-	case CHAR_DEL : delrune() ; break ;
-	case CHAR_DELTOBEG : deltobeg() ; break ;
-	/*case CHAR_DELWORD : delword() ; break ;
+	case CHAR_LEFT :
+		mvcurrel(-1);
+		break ;
+	case CHAR_RIGHT :
+		mvcurrel(+1);
+		break ;
+	case CHAR_END :
+		mvcur(linelen);
+		break ;
+	case CHAR_BEG :
+		mvcur(0) ;
+		break ;
+	case CHAR_EXIT :
+		running=0 ;
+		break ;
+	case CHAR_DEL :
+		delrune();
+		break ;
+	case CHAR_DELTOBEG :
+		deltobeg();
+		break ;
+	/*case CHAR_DELWORD :
+		delword();
+		break ;
 	case CHAR_BACKWORD : backword() ; break ;*/
 	//case CHAR RIGHTWORD : rightword() ; break ;
 	case CHAR_TAB : hndltab() ; break ;
-	case '\n' : finish() ; break ;
+	case '\n' :
+		finish() ;
+		break ;
 	default:
 		insrune(r) ;
 	}
