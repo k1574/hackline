@@ -69,24 +69,6 @@ runestrprint(Rune *rstr)
 }
 
 void
-disablebuffering(void)
-{
-	if(tcgetattr(0, &term_orig)) {
-		fprintf(stderr, "tcgetattr failed\n");
-		exit(1);
-	}
-	term = term_orig;
-	term.c_lflag &= ~ICANON;
-	term.c_lflag &= ~ECHO;
-	term.c_cc[VMIN] = 1;
-	term.c_cc[VTIME] = 0;
-	if (tcsetattr(0, TCSANOW, &term)) {
-		printf("tcsetattr failed\n");
-		exit(1);
-	}
-}
-
-void
 clearline(void)
 {
 	fstrprint(1, ESC "[0K");
@@ -257,7 +239,8 @@ hndlrune(Rune r)
 void
 quit(void)
 {
-	tcsetattr(0, TCSANOW, &term_orig);
+	aes_reset_term();
+	aes_apply_term_settings();
 	exit(0);
 }
 
@@ -273,7 +256,10 @@ main(int argc, char *argv[], char *envp[])
 {
 	argv0 = argv[0] ;
 	signal(SIGINT, sigint);
-	disablebuffering();
+	aes_reset_term();
+	aes_disable_input_buffering();
+	aes_disable_input_echo();
+	aes_apply_term_settings();
 	run();
 	return 0;
 }
