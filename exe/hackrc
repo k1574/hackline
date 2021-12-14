@@ -40,6 +40,12 @@ fn readevalline {
 
 while(true){
 	readevalline
+	cat $CMDHIST > $"CMDHIST^old
+	if(test ! -z $"line){
+		{echo $"line && \
+			cat $"CMDHIST^old}\
+		| uniq | sed $CMDHISTMAX^q  > $CMDHIST
+	}
 	echo
 	eval $"line
 }

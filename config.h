@@ -1,5 +1,7 @@
 #define CHAR_LEFT (char)8
 #define CHAR_RIGHT (char)12
+#define CHAR_PREVCMD (char)16
+#define CHAR_NEXTCMD (char)14
 #define CHAR_DELTOBEG (char)21
 #define CHAR_EXIT (char)24
 #define CHAR_DELWORD (char)23

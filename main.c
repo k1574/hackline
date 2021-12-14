@@ -24,6 +24,8 @@ void hndlrune(Rune);
 void quit(void);
 void run(void);
 void disablebuffering(void);
+void prevcmd(void);
+void nextcmd(void);
 
 void mvcur(int n);
 void mvcurrel(int n);
@@ -32,9 +34,14 @@ static char *argv0 = 0;
 
 static int running = 0; 
 static struct termios term, term_orig;
-static int curpos = 0 ;
 static int linelen = 0 ;
-static Rune linebuf[BufSiz] = {0, 0} ;
+static char *cmdhist;
+static Rune prevcmdbuf[BufSiz] = {0, 0} ;
+static Rune curcmdbuf[BufSiz] = {0, 0} ;
+
+static int curpos = 0 ; /* Cursor position. */
+static int curline = 0 ; /* Line in story of commands. 0 means current one. */
+static Rune *linebuf = curcmdbuf ;
 
 void
 sigint(int signum)
@@ -214,6 +221,12 @@ hndlrune(Rune r)
 	case CHAR_DEL :
 		delrune();
 		break ;
+	case CHAR_PREVCMD :
+		prevcmd();
+		break;
+	case CHAR_NEXTCMD :
+		nextcmd();
+		break;
 	case CHAR_DELTOBEG :
 		deltobeg();
 		break ;
@@ -237,6 +250,56 @@ hndlrune(Rune r)
 }
 
 void
+bufcmd(int n)
+{
+	char buf[BUFSIZ * sizeof(Rune)];
+	int i, len;
+	FILE *f;
+
+	if(n == curline || n < 0) return ;
+
+	if(!n){
+		linebuf = curcmdbuf ;
+	} else {
+		if(!(f = fopen(cmdhist, "r"))){
+			return;
+		}
+
+		for(i = 0 ; i<n ; ++i){
+			if(!fgets(buf, sizeof(buf), f)){
+				return;
+			}
+		}
+
+		len = strlen(buf) ;
+		
+		if(buf[len-1] == '\n')
+			buf[len-1] = 0 ;
+
+		linebuf = prevcmdbuf ;
+		utftorunes(linebuf, buf);
+		
+	}
+
+	curline = n ;
+	linelen = runestrlen(linebuf) ;
+	curpos = linelen ;
+	update();
+}
+
+void
+prevcmd(void)
+{
+	bufcmd(curline+1);
+}
+
+void
+nextcmd(void)
+{
+	bufcmd(curline-1);
+}
+
+void
 quit(void)
 {
 	aes_reset_term();
@@ -255,6 +318,7 @@ int
 main(int argc, char *argv[], char *envp[])
 {
 	argv0 = argv[0] ;
+	cmdhist = getenv("CMDHIST") ;
 	signal(SIGINT, sigint);
 	aes_reset_term();
 	aes_disable_input_buffering();
