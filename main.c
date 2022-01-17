@@ -7,7 +7,7 @@
 #include <string.h>
 #include <utf.h>
 
-#include <aes.h>
+#include <aes/aes.h>
 
 #include "config.h"
 #include "defs.h"
