@@ -5,7 +5,8 @@
 #include <signal.h>
 #include <termios.h>
 #include <string.h>
-#include <utf.h>
+
+#include <9/utf.h>
 
 #include <aes/aes.h>
 

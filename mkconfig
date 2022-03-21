@@ -2,5 +2,5 @@
 PROGNAME = hackline
 CFILES = `{ls *.c}
 HFILES = `{ls *.c}
-INCS = $INC9 -I$INCDIR
+INCS = -I$INCDIR
 AFILES = $OBJ9 $OBJDIR/aes.a
