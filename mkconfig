@@ -1,6 +1,7 @@
-<$MKINCDIR/config
+<$(MKINCDIR)/config
+MKSHELL = sh
 PROGNAME = hackline
-CFILES = `{ls *.c}
-HFILES = `{ls *.c}
+CFILES = `ls *.c`
+HFILES = `ls *.c`
 INCS = -I$INCDIR
 AFILES = $OBJ9 $OBJDIR/aes.a
